@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jedrenje simple shopping</title>
+<style>
+:root{
+  --bg:#f3f7f9; --surface:#ffffff; --text:#12303d; --muted:#6b8794; --line:#d5e3e9;
+  --accent:#0b6e8a; --accent-text:#ffffff; --danger:#b3412f; --done:#9bb3bd;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1b21; --surface:#16272f; --text:#e3eef2; --muted:#8aa3ae; --line:#27404b;
+    --accent:#4fb6d2; --accent-text:#08222b; --danger:#e8806d; --done:#5c7581; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1b21; --surface:#16272f; --text:#e3eef2; --muted:#8aa3ae; --line:#27404b;
+  --accent:#4fb6d2; --accent-text:#08222b; --danger:#e8806d; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Georgia,"Times New Roman",serif;min-height:100vh}
+main{max-width:34rem;margin:0 auto;padding:1.5rem 1rem 3rem}
+h1{font-size:1.9rem;margin:0 0 .15rem;letter-spacing:-.01em}
+.sub{margin:0 0 1.2rem;color:var(--muted);font-family:system-ui,sans-serif;font-size:.92rem}
+form.add{display:flex;gap:.5rem;margin-bottom:1rem}
+input[type=text]{flex:1;min-width:0;font:inherit;font-family:system-ui,sans-serif;font-size:1rem;padding:.75rem .9rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text)}
+input[type=text]:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font-family:system-ui,sans-serif;font-size:1rem;cursor:pointer}
+.addbtn{padding:0 1.1rem;border:0;border-radius:10px;background:var(--accent);color:var(--accent-text);font-weight:600}
+ul{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+li{display:flex;align-items:center;gap:.75rem;padding:.8rem .9rem;border-bottom:1px solid var(--line)}
+li:last-child{border-bottom:0}
+li input[type=checkbox]{width:1.35rem;height:1.35rem;accent-color:var(--accent);flex:none;cursor:pointer}
+li label{flex:1;font-size:1.08rem;cursor:pointer;word-break:break-word}
+li.done label{color:var(--done);text-decoration:line-through}
+.del{border:0;background:none;color:var(--muted);font-size:1.5rem;line-height:1;padding:.2rem .5rem;border-radius:8px}
+.del:hover{color:var(--danger)}
+.empty{padding:1.2rem;text-align:center;color:var(--muted);font-family:system-ui,sans-serif}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:.9rem;font-family:system-ui,sans-serif;font-size:.9rem;color:var(--muted)}
+.foot button{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:.45rem .8rem;border-radius:8px;font-size:.9rem}
+.foot button:disabled{opacity:.4;cursor:default}
+</style>
+</head>
+<body>
+<main>
+  <h1>Jedrenje simple shopping</h1>
+  <p class="sub" id="count"></p>
+  <form class="add" id="addForm" autocomplete="off">
+    <input type="text" id="newItem" placeholder="Dodaj stavku…" aria-label="Nova stavka" enterkeyhint="done">
+    <button class="addbtn" type="submit">Dodaj</button>
+  </form>
+  <ul id="list"></ul>
+  <div class="foot">
+    <button id="clearDone" type="button">Ukloni označeno</button>
+    <button id="reset" type="button">Vrati početni popis</button>
+  </div>
+</main>
+<script>
+(function(){
+  var KEY='jedrenje-shopping-v1';
+  var DEFAULTS=[
+    'Voće – banane/jabuke','Voda 6x1,5l','Mineralna','Vino bijelo','Piva 🍻','Mlijeko','Kruh',
+    'Mortadela','Bezglutenska tjestenina','Napolitanke','Rola salveta / Ubrusi'
+  ];
+  function fresh(){return DEFAULTS.map(function(t,i){return {id:'d'+i,text:t,done:false};});}
+  var items;
+  try{
+    var raw=localStorage.getItem(KEY);
+    items=raw?JSON.parse(raw):null;
+    if(!Array.isArray(items)) items=fresh();
+  }catch(e){items=fresh();}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
+
+  var list=document.getElementById('list');
+  var count=document.getElementById('count');
+  var input=document.getElementById('newItem');
+  var clearBtn=document.getElementById('clearDone');
+
+  function render(){
+    list.innerHTML='';
+    if(!items.length){
+      var e=document.createElement('li');e.className='empty';e.textContent='Popis je prazan. Dodaj prvu stavku.';
+      list.appendChild(e);
+    }
+    items.forEach(function(it){
+      var li=document.createElement('li');
+      if(it.done) li.className='done';
+      var cb=document.createElement('input');cb.type='checkbox';cb.checked=it.done;cb.id='c'+it.id;
+      cb.addEventListener('change',function(){it.done=cb.checked;save();render();});
+      var lab=document.createElement('label');lab.htmlFor=cb.id;lab.textContent=it.text;
+      var del=document.createElement('button');del.type='button';del.className='del';
+      del.setAttribute('aria-label','Obriši '+it.text);del.textContent='×';
+      del.addEventListener('click',function(){items=items.filter(function(x){return x.id!==it.id;});save();render();});
+      li.appendChild(cb);li.appendChild(lab);li.appendChild(del);
+      list.appendChild(li);
+    });
+    var left=items.filter(function(i){return !i.done;}).length;
+    count.textContent=items.length?('Još za kupiti: '+left+' od '+items.length):'';
+    clearBtn.disabled=!items.some(function(i){return i.done;});
+  }
+
+  document.getElementById('addForm').addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var t=input.value.trim();
+    if(!t) return;
+    items.push({id:'n'+Date.now()+Math.random().toString(36).slice(2,6),text:t,done:false});
+    input.value='';save();render();input.focus();
+  });
+  clearBtn.addEventListener('click',function(){items=items.filter(function(i){return !i.done;});save();render();});
+  document.getElementById('reset').addEventListener('click',function(){items=fresh();save();render();});
+  render();
+})();
+</script>
+</body>
+</html>
